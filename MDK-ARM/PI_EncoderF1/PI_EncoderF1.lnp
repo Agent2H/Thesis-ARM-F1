@@ -1,0 +1,23 @@
+--cpu Cortex-M3
+"pi_encoderf1\startup_stm32f103xb.o"
+"pi_encoderf1\main.o"
+"pi_encoderf1\stm32f1xx_it.o"
+"pi_encoderf1\stm32f1xx_hal_msp.o"
+"pi_encoderf1\stm32f1xx_hal_gpio_ex.o"
+"pi_encoderf1\stm32f1xx_hal_tim.o"
+"pi_encoderf1\stm32f1xx_hal_tim_ex.o"
+"pi_encoderf1\stm32f1xx_hal_uart.o"
+"pi_encoderf1\stm32f1xx_hal.o"
+"pi_encoderf1\stm32f1xx_hal_rcc.o"
+"pi_encoderf1\stm32f1xx_hal_rcc_ex.o"
+"pi_encoderf1\stm32f1xx_hal_gpio.o"
+"pi_encoderf1\stm32f1xx_hal_dma.o"
+"pi_encoderf1\stm32f1xx_hal_cortex.o"
+"pi_encoderf1\stm32f1xx_hal_pwr.o"
+"pi_encoderf1\stm32f1xx_hal_flash.o"
+"pi_encoderf1\stm32f1xx_hal_flash_ex.o"
+"pi_encoderf1\system_stm32f1xx.o"
+--library_type=microlib --strict --scatter "PI_EncoderF1\PI_EncoderF1.sct"
+--summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
+--info sizes --info totals --info unused --info veneers
+--list "PI_EncoderF1.map" -o PI_EncoderF1\PI_EncoderF1.axf

@@ -1,0 +1,18 @@
+pinnote for STM32F1
+Driver BTS7960:
+Driver cho bánh trái:
+-VCC,GND nối vào VDD 3V,GND của vdk.Chân R_EN,L_EN nối vào chân PB13,PB14.
+-Chân R_PWM nối vào PB7,chân L_PWM nối vào GND.
+Driver cho bánh phải:
+-VCC,GND tương tự bánh trái.
+-Chân R_EN nối vào PB15,L_EN nối vào PB12.
+-R_PWM nối vào GND, L_PWM nối vào PB8
+Động cơ bánh trái:
+-Encoder nối vào nguồn 5v.
+-Encoder kênh A nối vào PB3.
+Đông cơ bánh phải:
+-Nguồn vào 5v.
+-Encoder kênh A nối vào PB4.
+GND nguồn 5v nối chung GND nguồn 12v
+Chân PA3,PA2 của vdk là UART
+Chân PA2 nối vs RXD,PA3 nối với TXD
