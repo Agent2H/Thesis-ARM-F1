@@ -4,6 +4,8 @@
 "pi_encoderf1\stm32f1xx_it.o"
 "pi_encoderf1\stm32f1xx_hal_msp.o"
 "pi_encoderf1\stm32f1xx_hal_gpio_ex.o"
+"pi_encoderf1\stm32f1xx_hal_spi.o"
+"pi_encoderf1\stm32f1xx_hal_spi_ex.o"
 "pi_encoderf1\stm32f1xx_hal_tim.o"
 "pi_encoderf1\stm32f1xx_hal_tim_ex.o"
 "pi_encoderf1\stm32f1xx_hal_uart.o"
