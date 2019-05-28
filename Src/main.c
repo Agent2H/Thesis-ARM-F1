@@ -64,11 +64,10 @@
 
 /* Private variables ---------------------------------------------------------*/
 SPI_HandleTypeDef hspi1;
-SPI_HandleTypeDef hspi2;
 DMA_HandleTypeDef hdma_spi1_rx;
-DMA_HandleTypeDef hdma_spi2_rx;
 
 TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
 
 UART_HandleTypeDef huart2;
@@ -81,22 +80,31 @@ uint32_t NotReset_PulseLeft =0, NotReset_PulseRight=0;
 float Speed_LeftMotor=0, Speed_RightMotor=0; 	//Variable from 0-100 to control duty cycle
 float Ke=3.5,Kde=0.5,Kout=50;													//Parameter
 float CurrentX=0, CurrentY=0, CurrentPhi=0, PrevPhi=0;//Current position of the vehicle
+float gocLai;
 float PrevError=0, CurrErr=0;
 float dt=0.1f; 																		//Control Period
 float KhoangCach2Banh = 0.6f; //Khoang cach giua 2 banh xe
 uint8_t tim2Indicator=0; //Check if timer2 works
 float distance;
+
+//SPI
 uint8_t receive_data_1[8];
 uint8_t send_data[8];
-float firstFloat = 1.27f, secondFloat = 0.73f;
+uint8_t tim3Indicator = 0;
+
+
 uint8_t Tx[10]; //UART Transmit buffer
 float SendX,SendY;
 
 float EuclidThresh=0.3f;
 
 //Variable for going to different Destination
-float DestXList[]={	10.0f,	10.0f	,0.0f	,0.0f,	10.0f	,10.0f	,0.0f};
-float DestYList[]={	0.0f	,	4.0f	,4.0f	,8.0f,	8.0f	,12.0f	,12.0f};
+//float DestXList[]={	1000.0f,	10.0f	,0.0f	,0.0f,	10.0f	,10.0f	,0.0f};
+//float DestYList[]={	0.0f	,	4.0f	,4.0f	,8.0f,	8.0f	,12.0f	,12.0f};
+//float DestXList[]={	20.0f,	20.0f	,0.0f	,0.0f,	18.0f	,18.0f	,0.0f};
+//float DestYList[]={	0.0f	,	4.0f	,4.0f	,12.0f,	12.0f	,16.0f	,16.0f};
+float DestXList[]={	20.0f,	20.0f	,0.0f	};
+float DestYList[]={	0.0f	,	4.0f	,4.0f	};
 int countDestList=0;
 float DestX,DestY;
 
@@ -110,19 +118,19 @@ static void MX_USART2_UART_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_SPI1_Init(void);
-static void MX_SPI2_Init(void);
+static void MX_TIM3_Init(void);
 /* USER CODE BEGIN PFP */
 //Ham truyen SPI
 void Send_2Float(){
 	unsigned char *chptr;
 	
-	chptr=(unsigned char *)&firstFloat;
+	chptr=(unsigned char *)&gocLai;
 	send_data[0]=(*chptr++); 	//LSB
 	send_data[1]=(*chptr++);
 	send_data[2]=(*chptr++);
 	send_data[3]=(*chptr);		//MSB
 	
-	chptr=(unsigned char *)&secondFloat;
+	chptr=(unsigned char *)&CurrentPhi;
 	send_data[4]=(*chptr++);	//LSB
 	send_data[5]=(*chptr++);
 	send_data[6]=(*chptr++);
@@ -401,7 +409,8 @@ void Fuzzy_ControlMotor(float e, float de){
 float Encoder2Distance(int pulse){
 	// 1 vong dong co = 350 xung
 	// ban kinh truc dong co R = 7 mm
-	return (float)pulse*2*3.14f*7/(350*1000);
+	float hesokinhnghiem=1.5;
+	return (float)pulse*2*3.14f*7*hesokinhnghiem/(350*1000);
 }
 void CalculateNewPosition(float RightDistance, float LeftDistance){
 
@@ -423,13 +432,13 @@ void UpdateParams(float Error,float Phi){
 //Turn Around Control Functions
 void SpinRight(){
 	/*Function for right spin*/
-	SetPWM_withDutyCycle(&htim4,TIM_CHANNEL_2,50);//TIM_CHANNEL_2 = PB7 = Left Motor
-	SetPWM_withDutyCycle(&htim4,TIM_CHANNEL_3,20);//TIM_CHANNEL_3 = PB8 = Right Motor
+	SetPWM_withDutyCycle(&htim4,TIM_CHANNEL_2,60);//TIM_CHANNEL_2 = PB7 = Left Motor
+	SetPWM_withDutyCycle(&htim4,TIM_CHANNEL_3,30);//TIM_CHANNEL_3 = PB8 = Right Motor
 }
 void SpinLeft(){
 	/*Function for left spin*/
-	SetPWM_withDutyCycle(&htim4,TIM_CHANNEL_2,20);//TIM_CHANNEL_2 = PB7 = Left Motor
-	SetPWM_withDutyCycle(&htim4,TIM_CHANNEL_3,50);//TIM_CHANNEL_3 = PB8 = Right Motor
+	SetPWM_withDutyCycle(&htim4,TIM_CHANNEL_2,30);//TIM_CHANNEL_2 = PB7 = Left Motor
+	SetPWM_withDutyCycle(&htim4,TIM_CHANNEL_3,60);//TIM_CHANNEL_3 = PB8 = Right Motor
 }
 
 void Fuzzy_TurnAround(float xDest,float yDest,float xCurr, float yCurr,float phiCurr,float AcceptAngle){
@@ -451,7 +460,7 @@ void Fuzzy_TurnAround(float xDest,float yDest,float xCurr, float yCurr,float phi
 		Params from DestX,DestY, CurrentX, Current Y, CurrentPhi
 		return GocLai
 		*/
-		float gocLai=GetNewGocLai(0.6f, DestX,DestY,CurrentX,CurrentY,CurrentPhi);
+		 gocLai=GetNewGocLai(0.6f, DestX,DestY,CurrentX,CurrentY,CurrentPhi);
 		
 		//Get current Error
 		/*
@@ -581,7 +590,7 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM4_Init();
   MX_SPI1_Init();
-  MX_SPI2_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 	
 		//Start PWM
@@ -591,17 +600,19 @@ int main(void)
 	//Set destination
 	DestX=DestXList[0];
 	DestY=DestYList[0];
-	//Start Timer 2
+	//Start Timer 2 3
+  HAL_TIM_Base_Start_IT(&htim3);
 	HAL_TIM_Base_Start_IT(&htim2);
 	HAL_SPI_Receive_DMA(&hspi1,&receive_data_1[0],8);
 
-	//Set GPIOC 13,14 to Vdd to Enable for the Right Driver,GPIOA 10,11 to Vdd to Enable for the Left Driver,GPIOB 9 and GPIOA 1 to GND
+	//Set GPIOC 13,14 to Vdd to Enable for the Right Driver,GPIOB 13,14 to Vdd to Enable for the Left Driver,GPIOB 9,GPIOC 15 and GPIOA 1 to GND
 	HAL_GPIO_WritePin(GPIOC,GPIO_PIN_13,GPIO_PIN_SET);
-	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_10,GPIO_PIN_SET);
-	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_11,GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOB,GPIO_PIN_13,GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOB,GPIO_PIN_14,GPIO_PIN_SET);
 	HAL_GPIO_WritePin(GPIOC,GPIO_PIN_14,GPIO_PIN_SET);
 	HAL_GPIO_WritePin(GPIOB,GPIO_PIN_9,GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_1,GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOC,GPIO_PIN_15,GPIO_PIN_RESET);
   
 	//set first destination
 
@@ -693,44 +704,6 @@ static void MX_SPI1_Init(void)
 }
 
 /**
-  * @brief SPI2 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_SPI2_Init(void)
-{
-
-  /* USER CODE BEGIN SPI2_Init 0 */
-
-  /* USER CODE END SPI2_Init 0 */
-
-  /* USER CODE BEGIN SPI2_Init 1 */
-
-  /* USER CODE END SPI2_Init 1 */
-  /* SPI2 parameter configuration*/
-  hspi2.Instance = SPI2;
-  hspi2.Init.Mode = SPI_MODE_SLAVE;
-  hspi2.Init.Direction = SPI_DIRECTION_2LINES;
-  hspi2.Init.DataSize = SPI_DATASIZE_8BIT;
-  hspi2.Init.CLKPolarity = SPI_POLARITY_LOW;
-  hspi2.Init.CLKPhase = SPI_PHASE_1EDGE;
-  hspi2.Init.NSS = SPI_NSS_HARD_INPUT;
-  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
-  hspi2.Init.FirstBit = SPI_FIRSTBIT_MSB;
-  hspi2.Init.TIMode = SPI_TIMODE_DISABLE;
-  hspi2.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-  hspi2.Init.CRCPolynomial = 10;
-  if (HAL_SPI_Init(&hspi2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN SPI2_Init 2 */
-
-  /* USER CODE END SPI2_Init 2 */
-
-}
-
-/**
   * @brief TIM2 Initialization Function
   * @param None
   * @retval None
@@ -772,6 +745,51 @@ static void MX_TIM2_Init(void)
   /* USER CODE BEGIN TIM2_Init 2 */
 
   /* USER CODE END TIM2_Init 2 */
+
+}
+
+/**
+  * @brief TIM3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM3_Init(void)
+{
+
+  /* USER CODE BEGIN TIM3_Init 0 */
+
+  /* USER CODE END TIM3_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM3_Init 1 */
+
+  /* USER CODE END TIM3_Init 1 */
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 6399;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 999;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM3_Init 2 */
+
+  /* USER CODE END TIM3_Init 2 */
 
 }
 
@@ -883,9 +901,6 @@ static void MX_DMA_Init(void)
   /* DMA1_Channel2_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel2_IRQn);
-  /* DMA1_Channel4_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Channel4_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Channel4_IRQn);
 
 }
 
@@ -904,39 +919,39 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13|GPIO_PIN_14, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1|GPIO_PIN_10|GPIO_PIN_11, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_9, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : PC13 PC14 */
-  GPIO_InitStruct.Pin = GPIO_PIN_13|GPIO_PIN_14;
+  /*Configure GPIO pins : PC13 PC14 PC15 */
+  GPIO_InitStruct.Pin = GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PA1 PA10 PA11 */
-  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_10|GPIO_PIN_11;
+  /*Configure GPIO pin : PA1 */
+  GPIO_InitStruct.Pin = GPIO_PIN_1;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+  /*Configure GPIO pins : PB13 PB14 PB9 */
+  GPIO_InitStruct.Pin = GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_9;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
   /*Configure GPIO pins : PB3 PB4 */
   GPIO_InitStruct.Pin = GPIO_PIN_3|GPIO_PIN_4;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PB9 */
-  GPIO_InitStruct.Pin = GPIO_PIN_9;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
@@ -994,7 +1009,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		//GetNewDestImprove(DestX,DestY,CurrentX,CurrentY);
 	
 	//Control Motors - with turn around ability, accept angle = pi/4 rad = 0.785 rad = 45 degree
-  	Fuzzy_TurnAround(DestX,DestY,CurrentX,CurrentY,CurrentPhi,0.785);
+  	Fuzzy_TurnAround(DestX,DestY,CurrentX,CurrentY,CurrentPhi,1.047);
 		
 	 //PP_TurnAround(0.5f,DestX,DestY,CurrentX,CurrentY,CurrentPhi,150,0.52);
 	}
